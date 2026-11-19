@@ -1,0 +1,478 @@
+
+<!DOCTYPE html>
+<html lang="hi">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Crop Doctor AI | Plant Disease Detection</title>
+
+<style>
+* {
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
+}
+
+body {
+  font-family: Arial, sans-serif;
+  background: #f3f8f2;
+  color: #183b25;
+}
+
+header {
+  background: #14532d;
+  color: white;
+  padding: 22px;
+  text-align: center;
+}
+
+header h1 {
+  font-size: 28px;
+}
+
+header p {
+  margin-top: 8px;
+  color: #d1fae5;
+}
+
+.container {
+  max-width: 850px;
+  margin: 35px auto;
+  padding: 20px;
+}
+
+.card {
+  background: white;
+  padding: 28px;
+  border-radius: 18px;
+  box-shadow: 0 5px 25px #00000012;
+  margin-bottom: 20px;
+}
+
+h2 {
+  margin-bottom: 18px;
+  color: #166534;
+}
+
+.upload {
+  border: 2px dashed #22a35a;
+  padding: 35px 15px;
+  text-align: center;
+  border-radius: 15px;
+  background: #f0fdf4;
+  cursor: pointer;
+}
+
+.upload:hover {
+  background: #dcfce7;
+}
+
+.upload input {
+  display: none;
+}
+
+.upload p {
+  margin-top: 10px;
+  color: #64748b;
+}
+
+#preview {
+  display: none;
+  width: 100%;
+  max-height: 350px;
+  object-fit: contain;
+  margin-top: 20px;
+  border-radius: 12px;
+}
+
+button {
+  width: 100%;
+  padding: 15px;
+  background: #15803d;
+  color: white;
+  border: none;
+  border-radius: 10px;
+  font-size: 17px;
+  font-weight: bold;
+  cursor: pointer;
+  margin-top: 18px;
+}
+
+button:hover {
+  background: #166534;
+}
+
+button:disabled {
+  background: #94a3b8;
+  cursor: not-allowed;
+}
+
+.result {
+  display: none;
+  margin-top: 25px;
+}
+
+.result-box {
+  background: #f0fdf4;
+  padding: 20px;
+  border-radius: 12px;
+  margin-bottom: 15px;
+}
+
+.result-box h3 {
+  color: #166534;
+  margin-bottom: 10px;
+}
+
+.result-box p {
+  line-height: 1.7;
+}
+
+.bar {
+  height: 12px;
+  background: #e2e8f0;
+  border-radius: 20px;
+  margin: 12px 0;
+  overflow: hidden;
+}
+
+.bar span {
+  display: block;
+  height: 100%;
+  background: #16a34a;
+}
+
+.note {
+  background: #fff7ed;
+  padding: 15px;
+  border-radius: 10px;
+  color: #9a3412;
+  font-size: 14px;
+  line-height: 1.6;
+}
+
+footer {
+  text-align: center;
+  padding: 25px;
+  color: #64748b;
+}
+
+@media(max-width:600px) {
+  .container { margin: 15px auto; }
+  .card { padding: 18px; }
+  header h1 { font-size: 23px; }
+}
+</style>
+</head>
+
+<body>
+
+<header>
+  <h1>🌿 Crop Doctor AI</h1>
+  <p>Smart Plant Disease Detection System</p>
+</header>
+
+<div class="container">
+
+  <div class="card">
+    <h2>🌱 Upload Plant Image</h2>
+
+    <label class="upload">
+      <div style="font-size:45px">📸</div>
+      <h3>Upload Your Plant Photo</h3>
+      <p>Click here to select a leaf image</p>
+      <input type="file" id="file" accept="image/*">
+    </label>
+
+    <img id="preview" alt="Plant preview">
+
+    <button id="analyze" onclick="analyzeImage()" disabled>
+      🔍 Detect Plant Disease
+    </button>
+  </div>
+
+  <div class="card result" id="result">
+
+    <h2>📋 Analysis Report</h2>
+
+    <div class="result-box">
+      <h3 id="disease">Analysis</h3>
+      <p id="description"></p>
+    </div>
+
+    <div class="result-box">
+      <h3>📊 Image Color Analysis</h3>
+
+      <p>Yellow pixels: <b id="yellowText"></b></p>
+      <div class="bar"><span id="yellowBar"></span></div>
+
+      <p>Brown pixels: <b id="brownText"></b></p>
+      <div class="bar"><span id="brownBar"></span></div>
+
+      <p>Green pixels: <b id="greenText"></b></p>
+      <div class="bar"><span id="greenBar"></span></div>
+    </div>
+
+    <div class="result-box">
+      <h3>💊 Suggested Treatment</h3>
+      <p id="treatment"></p>
+    </div>
+
+    <div class="note">
+      ⚠️ यह स्थानीय Image Processing पर आधारित संभावित अनुमान है।
+      यह वास्तविक AI मॉडल द्वारा बीमारी की पुष्टि नहीं करता।
+      उपचार करने से पहले कृषि विशेषज्ञ से सलाह लें।
+    </div>
+
+  </div>
+
+</div>
+
+<footer>
+  © 2026 Crop Doctor AI | Offline Plant Analysis
+</footer>
+
+<script>
+
+let selectedImage = null;
+
+const fileInput = document.getElementById("file");
+const preview = document.getElementById("preview");
+const analyzeBtn = document.getElementById("analyze");
+
+fileInput.addEventListener("change", function(e) {
+
+  const file = e.target.files[0];
+
+  if (!file) return;
+
+  if (!file.type.startsWith("image/")) {
+    alert("Please select a valid image.");
+    return;
+  }
+
+  if (file.size > 15 * 1024 * 1024) {
+    alert("Image must be smaller than 15 MB.");
+    return;
+  }
+
+  const reader = new FileReader();
+
+  reader.onload = function(event) {
+    selectedImage = new Image();
+
+    selectedImage.onload = function() {
+      preview.src = event.target.result;
+      preview.style.display = "block";
+      analyzeBtn.disabled = false;
+      document.getElementById("result").style.display = "none";
+    };
+
+    selectedImage.src = event.target.result;
+  };
+
+  reader.readAsDataURL(file);
+
+});
+
+function analyzeImage() {
+
+  if (!selectedImage) return;
+
+  const canvas = document.createElement("canvas");
+  const ctx = canvas.getContext("2d");
+
+  const maxSize = 500;
+
+  const scale = Math.min(
+    1,
+    maxSize / selectedImage.width,
+    maxSize / selectedImage.height
+  );
+
+  canvas.width = Math.round(selectedImage.width * scale);
+  canvas.height = Math.round(selectedImage.height * scale);
+
+  ctx.drawImage(
+    selectedImage,
+    0, 0,
+    canvas.width,
+    canvas.height
+  );
+
+  const imageData = ctx.getImageData(
+    0, 0,
+    canvas.width,
+    canvas.height
+  ).data;
+
+  let yellow = 0;
+  let brown = 0;
+  let green = 0;
+  let total = 0;
+
+  for (let i = 0; i < imageData.length; i += 4) {
+
+    const r = imageData[i];
+    const g = imageData[i + 1];
+    const b = imageData[i + 2];
+
+    // Ignore very dark and bright pixels
+    const brightness = (r + g + b) / 3;
+
+    if (brightness < 25 || brightness > 245) continue;
+
+    total++;
+
+    // Yellow color detection
+    if (
+      r > 120 &&
+      g > 100 &&
+      b < 115 &&
+      r > b * 1.3
+    ) {
+      yellow++;
+    }
+
+    // Brown color detection
+    else if (
+      r > g &&
+      g > b &&
+      r < 180 &&
+      g < 130
+    ) {
+      brown++;
+    }
+
+    // Green color detection
+    else if (
+      g > r * 1.15 &&
+      g > b * 1.1 &&
+      g > 45
+    ) {
+      green++;
+    }
+
+  }
+
+  if (total === 0) {
+    alert("Image analysis failed. Please upload another photo.");
+    return;
+  }
+
+  const yellowPct = (yellow / total) * 100;
+  const brownPct = (brown / total) * 100;
+  const greenPct = (green / total) * 100;
+
+  let disease = "";
+  let description = "";
+  let treatment = "";
+
+  if (brownPct > 12) {
+
+    disease = "Possible Leaf Spot / Brown Leaf Damage";
+
+    description =
+      "Image में भूरे रंग के काफी pixels मिले हैं। " +
+      "यह Leaf Spot जैसी समस्या या अन्य प्रकार की पत्ती की क्षति हो सकती है।";
+
+    treatment =
+      "प्रभावित पत्तियों को हटाएं। पौधे के आसपास हवा का संचार रखें। " +
+      "पत्तियों को अनावश्यक रूप से गीला न रखें।";
+
+  }
+
+  else if (yellowPct > 18) {
+
+    disease = "Possible Yellowing / Nutrient Stress";
+
+    description =
+      "Image में पीले रंग के pixels अधिक पाए गए हैं। " +
+      "यह पोषक तत्वों की कमी, अधिक पानी या अन्य कारणों से हो सकता है।";
+
+    treatment =
+      "मिट्टी की नमी जांचें। जल निकासी सुधारें। " +
+      "उर्वरक का उपयोग मिट्टी की जांच के बाद करें।";
+
+  }
+
+  else if (greenPct > 20 && brownPct < 5 && yellowPct < 8) {
+
+    disease = "No Major Color Abnormality Detected";
+
+    description =
+      "Image में हरे रंग की मात्रा अधिक है और स्पष्ट पीले या भूरे रंग के " +
+      "संकेत कम हैं। इससे यह साबित नहीं होता कि पौधा पूरी तरह स्वस्थ है।";
+
+    treatment =
+      "नियमित पानी दें, पर्याप्त धूप रखें और पत्तियों की नियमित जांच करें।";
+
+  }
+
+  else {
+
+    disease = "Uncertain Result - More Inspection Needed";
+
+    description =
+      "इस फोटो से किसी एक संभावित समस्या का अनुमान लगाना मुश्किल है। " +
+      "बेहतर रोशनी में पत्ती की साफ और नजदीकी फोटो लें।";
+
+    treatment =
+      "पौधे को ध्यान से देखें। पत्तियों के दोनों तरफ, तने और मिट्टी की भी जांच करें।";
+
+  }
+
+  showResult(
+    disease,
+    description,
+    treatment,
+    yellowPct,
+    brownPct,
+    greenPct
+  );
+
+}
+
+function showResult(
+  disease,
+  description,
+  treatment,
+  yellow,
+  brown,
+  green
+) {
+
+  document.getElementById("result").style.display = "block";
+
+  document.getElementById("disease").textContent = disease;
+
+  document.getElementById("description").textContent = description;
+
+  document.getElementById("treatment").textContent = treatment;
+
+  setBar("yellow", yellow);
+  setBar("brown", brown);
+  setBar("green", green);
+
+  document.getElementById("result").scrollIntoView({
+    behavior: "smooth"
+  });
+
+}
+
+function setBar(name, value) {
+
+  const percentage = Math.min(100, value);
+
+  document.getElementById(name + "Text").textContent =
+    percentage.toFixed(2) + "%";
+
+  document.getElementById(name + "Bar").style.width =
+    percentage + "%";
+
+}
+
+</script>
+
+</body>
+</html>
